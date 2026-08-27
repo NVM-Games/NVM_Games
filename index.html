@@ -1,1 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>THE NIGHTMARE: 30-MIN PURSUIT</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+    body {
+      background: #000;
+      color: #b30000;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+    #screen-warning, #screen-game, #screen-jumpscare {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .warning-box {
+      background: #080808;
+      border: 2px solid #800;
+      padding: 24px;
+      max-width: 420px;
+      margin: 16px;
+      text-align: center;
+      box-shadow: 0 0 25px #ff000033;
+    }
+    h1 { font-size: 26px; color: #ff0000; text-shadow: 0 0 10px #f00; margin-bottom: 12px; }
+    p { font-size: 13px; color: #ccc; margin-bottom: 14px; line-height: 1.5; }
+    .bold-red { color: #ff3333; font-weight: bold; }
+    select, button {
+      background: #111;
+      color: #ff3333;
+      border: 1px solid #ff3333;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-family: inherit;
+      margin: 8px 0;
+      width: 100%;
+      cursor: pointer;
+    }
+    button:active { background: #ff0000; color: #000; }
+    #screen-game { display: none; background: #000; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+    .hud {
+      position: absolute;
+      top: 10px; left: 10px; right: 10px;
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 14px;
+      text-shadow: 0 0 5px #000;
+      pointer-events: none;
+    }
+    .hud span { background: rgba(0,0,0,0.6); padding: 4px 8px; border: 1px solid #333; }
+    .controls {
+      position: absolute;
+      bottom: 20px; left: 0; right: 0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      pointer-events: auto;
+      padding: 0 10px;
+    }
+    .touch-btn {
+      width: 65px; height: 65px;
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.15);
+      border: 2px solid #ff0000;
+      color: #fff;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+    .touch-btn:active { background: rgba(255, 0, 0, 0.6); }
+    #screen-jumpscare {
+      display: none;
+      background: #000;
+      z-index: 999;
+    }
+    .scare-face {
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, #fff 10%, #600 40%, #000 80%);
+      border-radius: 50%;
+      position: relative;
+      animation: shake 0.05s infinite;
+    }
+    .eye {
+      position: absolute;
+      width: 40px; height: 70px;
+      background: #000;
+      top: 80px;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #f00;
+    }
+    .eye.left { left: 70px; }
+    .eye.right { right: 70px; }
+    .mouth {
+      position: absolute;
+      bottom: 40px; left: 80px;
+      width: 160px; height: 110px;
+      background: #000;
+      border-radius: 0 0 80px 80px;
+    }
+    @keyframes shake {
+      0% { transform: translate(2px, 1px) rotate(0deg); }
+      50% { transform: translate(-2px, -2px) rotate(2deg); }
+      100% { transform: translate(1px, 2px) rotate(-1deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 18+ Warning Screen -->
+  <div id="screen-warning">
+    <div class="warning-box">
+      <h1>⚠️ 18+ EXTREME WARNING</h1>
+      <p class="bold-red">WARNING: FLASHING LIGHTS, INTENSE HORROR, LOUD JUMPSCARES, & DISTURBING PSYCHOLOGICAL AUDIO.</p>
+      <p>Ee game lo oka deyyam ninnu maze lo vetaduthundi. Nuuvu dhakkuni 30 mins survive avvali. Kani 30 minutes ayyela dhorikipothav...</p>
+      
+      <select id="user-age">
+        <option value="">Select Age</option>
+        <option value="18+">18 Years or Above</option>
+        <option value="under18">Under 18</option>
+      </select>
+      
+      <select id="user-gender">
+        <option value="">Select Gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+
+      <button id="btn-start">ENTER NIGHTMARE</button>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="screen-game">
+    <canvas id="renderCanvas"></canvas>
+    <div class="hud">
+      <span id="hud-timer">SURVIVED: 00:00 / 30:00</span>
+      <span id="hud-status" style="color: #00ff66;">STATUS: SAFE</span>
+      <span id="hud-battery">BATTERY: 100%</span>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div class="controls">
+      <div class="touch-btn" id="btn-left">◀ TURN</div>
+      <div class="touch-btn" id="btn-fwd">▲ RUN</div>
+      <div class="touch-btn" id="btn-right">TURN ▶</div>
+      <div class="touch-btn" id="btn-hide" style="border-color:#ffcc00; color:#ffcc00;">HIDE</div>
+    </div>
+  </div>
+
+  <!-- Jumpscare Screen -->
+  <div id="screen-jumpscare">
+    <div class="scare-face">
+      <div class="eye left"></div>
+      <div class="eye right"></div>
+      <div class="mouth"></div>
+    </div>
+    <h1 style="font-size:32px; margin-top:20px;">YOU CANNOT ESCAPE HER.</h1>
+  </div>
+
+  <script>
+    // Audio Synth Setup
+    let audioCtx;
+    function initAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      startDrone();
+    }
+
+    function startDrone() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(45, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+    }
+
+    function playHeartbeat(fast = false) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(fast ? 90 : 60, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    function playScream() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.8);
+      gain.gain.setValueAtTime(0.9, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.85);
+    }
+
+    // Maze Definition
+    const map = [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,0,0,0,0,0,0,1],
+      [1,0,1,0,1,0,1,1,1,1,0,1],
+      [1,0,1,0,0,0,0,0,0,1,0,1],
+      [1,0,1,1,1,1,0,1,0,1,0,1],
+      [1,0,0,0,0,1,0,1,0,0,0,1],
+      [1,1,1,0,0,1,0,1,1,1,0,1],
+      [1,0,0,0,0,0,0,0,0,1,0,1],
+      [1,0,1,1,1,1,1,1,0,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    let player = { x: 1.5, y: 1.5, dir: 0, rot: 0, speed: 0, isHiding: false };
+    let ghost = { x: 9.5, y: 9.5, speed: 0.015 };
+    let battery = 100;
+    let startTime;
+    let gameOver = false;
+
+    const canvas = document.getElementById('renderCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Start Screen Flow
+    document.getElementById('btn-start').addEventListener('click', () => {
+      const age = document.getElementById('user-age').value;
+      const gender = document.getElementById('user-gender').value;
+
+      if (!age || !gender) {
+        alert('Please select Age and Gender to verify warnings.');
+        return;
+      }
+      if (age === 'under18') {
+        alert('WARNING: Under 18 are not allowed due to intense psychological horror elements.');
+        return;
+      }
+
+      initAudio();
+      document.getElementById('screen-warning').style.display = 'none';
+      document.getElementById('screen-game').style.display = 'flex';
+      startTime = Date.now();
+      requestAnimationFrame(gameLoop);
+      setInterval(heartbeatLoop, 1000);
+    });
+
+    // Touch controls
+    const bindBtn = (id, onDown, onUp) => {
+      const el = document.getElementById(id);
+      el.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); });
+      el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); });
+      el.addEventListener('mousedown', onDown);
+      el.addEventListener('mouseup', onUp);
+    };
+
+    bindBtn('btn-left', () => player.rot = -0.04, () => player.rot = 0);
+    bindBtn('btn-right', () => player.rot = 0.04, () => player.rot = 0);
+    bindBtn('btn-fwd', () => player.speed = 0.035, () => player.speed = 0);
+
+    const hideBtn = document.getElementById('btn-hide');
+    hideBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      player.isHiding = !player.isHiding;
+      hideBtn.innerText = player.isHiding ? 'UNHIDE' : 'HIDE';
+    });
+
+    function heartbeatLoop() {
+      if (gameOver) return;
+      const dist = Math.hypot(ghost.x - player.x, ghost.y - player.y);
+      if (dist < 3) playHeartbeat(true);
+      else if (dist < 6) playHeartbeat(false);
+    }
+
+    // Raycasting Rendering
+    function render3D() {
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+      const fov = Math.PI / 3;
+      const numRays = Math.floor(canvas.width / 4);
+      const halfFov = fov / 2;
+
+      for (let i = 0; i < numRays; i++) {
+        const rayAngle = player.dir - halfFov + (i / numRays) * fov;
+        let dist = 0;
+        let hit = 0;
+        const cos = Math.cos(rayAngle);
+        const sin = Math.sin(rayAngle);
+
+        while (!hit && dist < 12) {
+          dist += 0.05;
+          const checkX = Math.floor(player.x + cos * dist);
+          const checkY = Math.floor(player.y + sin * dist);
+          if (map[checkY] && map[checkY][checkX] === 1) hit = 1;
+        }
+
+        const correctedDist = dist * Math.cos(rayAngle - player.dir);
+        const wallHeight = Math.min(canvas.height, (canvas.height / correctedDist));
+        
+        // Flashlight shade
+        const shade = Math.max(0, 1 - (dist / (battery > 10 ? 8 : 3)));
+        const r = Math.floor(60 * shade);
+        const g = Math.floor(0 * shade);
+        const b = Math.floor(0 * shade);
+
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(i * 4, (canvas.height - wallHeight) / 2, 4, wallHeight);
+      }
+
+      // Render Ghost marker if in view
+      const gDist = Math.hypot(ghost.x - player.x, ghost.y - player.y);
+      if (gDist < 6) {
+        ctx.fillStyle = `rgba(255, 0, 0, ${1 - gDist / 6})`;
+        ctx.fillRect(canvas.width/2 - 20, canvas.height/2 - 20, 40, 80);
+      }
+    }
+
+    function triggerScare() {
+      gameOver = true;
+      playScream();
+      document.getElementById('screen-game').style.display = 'none';
+      document.getElementById('screen-jumpscare').style.display = 'flex';
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      player.dir += player.rot;
+      if (!player.isHiding) {
+        const nx = player.x + Math.cos(player.dir) * player.speed;
+        const ny = player.y + Math.sin(player.dir) * player.speed;
+        if (map[Math.floor(ny)][Math.floor(nx)] === 0) {
+          player.x = nx;
+          player.y = ny;
+        }
+      }
+
+      // Ghost AI Movement
+      const dx = player.x - ghost.x;
+      const dy = player.y - ghost.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (!player.isHiding || dist < 1.2) {
+        ghost.x += (dx / dist) * ghost.speed;
+        ghost.y += (dy / dist) * ghost.speed;
+      }
+
+      // Timer & 30-min inevitability
+      const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+      const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+      const secs = String(elapsedSec % 60).padStart(2, '0');
+      document.getElementById('hud-timer').innerText = `SURVIVED: ${mins}:${secs} / 30:00`;
+
+      // Speed up ghost gradually up to 30 mins
+      ghost.speed = 0.015 + (elapsedSec / 1800) * 0.05;
+
+      // Battery drain
+      battery = Math.max(0, 100 - (elapsedSec / 18));
+      document.getElementById('hud-battery').innerText = `BATTERY: ${Math.floor(battery)}%`;
+
+      const statusEl = document.getElementById('hud-status');
+      if (player.isHiding) {
+        statusEl.innerText = 'STATUS: HIDDEN';
+        statusEl.style.color = '#ffcc00';
+      } else if (dist < 3) {
+        statusEl.innerText = 'STATUS: IT SEES YOU!';
+        statusEl.style.color = '#ff0000';
+      } else {
+        statusEl.innerText = 'STATUS: SAFE';
+        statusEl.style.color = '#00ff66';
+      }
+
+      // Caught check (or 30 mins reached)
+      if (dist < 0.4 || elapsedSec >= 1800) {
+        triggerScare();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      render3D();
+      if (!gameOver) requestAnimationFrame(gameLoop);
+    }
+  </script>
+</body>
+</html>
 
