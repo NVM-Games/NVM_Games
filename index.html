@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>THE NIGHTMARE: 30-MIN PURSUIT</title>
+  <title>THE PSYCHOLOGICAL NIGHTMARE</title>
   <style>
     * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
     body {
       background: #000;
-      color: #b30000;
+      color: #aaa;
       font-family: 'Courier New', monospace;
       overflow: hidden;
       height: 100vh;
       width: 100vw;
     }
-    #screen-warning, #screen-game, #screen-jumpscare {
+    #screen-warning, #screen-game, #screen-jumpscare, #screen-escaped {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -24,42 +24,65 @@
       justify-content: center;
     }
     .warning-box {
-      background: #080808;
-      border: 2px solid #800;
+      background: #050505;
+      border: 1px solid #333;
       padding: 24px;
-      max-width: 420px;
+      max-width: 400px;
       margin: 16px;
       text-align: center;
-      box-shadow: 0 0 25px #ff000033;
+      box-shadow: 0 0 40px #000;
     }
-    h1 { font-size: 26px; color: #ff0000; text-shadow: 0 0 10px #f00; margin-bottom: 12px; }
-    p { font-size: 13px; color: #ccc; margin-bottom: 14px; line-height: 1.5; }
-    .bold-red { color: #ff3333; font-weight: bold; }
+    h1 { font-size: 22px; color: #eee; letter-spacing: 2px; margin-bottom: 12px; }
+    p { font-size: 13px; color: #888; margin-bottom: 12px; line-height: 1.4; }
     select, button {
       background: #111;
-      color: #ff3333;
-      border: 1px solid #ff3333;
-      padding: 10px 16px;
+      color: #ccc;
+      border: 1px solid #444;
+      padding: 10px 14px;
       font-size: 14px;
       font-family: inherit;
-      margin: 8px 0;
+      margin: 6px 0;
       width: 100%;
       cursor: pointer;
     }
-    button:active { background: #ff0000; color: #000; }
+    button:active { background: #333; color: #fff; }
     #screen-game { display: none; background: #000; }
     canvas { width: 100vw; height: 100vh; display: block; }
+    
+    /* Horror Vignette Overlay */
+    .vignette {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.85) 80%, rgba(0,0,0,0.98) 100%);
+      transition: box-shadow 0.2s;
+    }
+    .panic-red {
+      box-shadow: inset 0 0 100px rgba(180, 0, 0, 0.7);
+    }
+    
     .hud {
       position: absolute;
-      top: 10px; left: 10px; right: 10px;
+      top: 12px; left: 12px; right: 12px;
       display: flex;
       justify-content: space-between;
-      color: #fff;
-      font-size: 14px;
-      text-shadow: 0 0 5px #000;
+      color: #999;
+      font-size: 12px;
+      letter-spacing: 1px;
       pointer-events: none;
     }
-    .hud span { background: rgba(0,0,0,0.6); padding: 4px 8px; border: 1px solid #333; }
+    .hud span { background: rgba(5,5,5,0.8); padding: 4px 8px; border: 1px solid #222; }
+    .alert-msg {
+      position: absolute;
+      top: 50px;
+      color: #ddd;
+      font-size: 14px;
+      letter-spacing: 2px;
+      text-align: center;
+      width: 100%;
+      text-shadow: 0 0 8px #000;
+      pointer-events: none;
+    }
     .controls {
       position: absolute;
       bottom: 20px; left: 0; right: 0;
@@ -70,63 +93,53 @@
       padding: 0 10px;
     }
     .touch-btn {
-      width: 65px; height: 65px;
+      width: 60px; height: 60px;
       border-radius: 50%;
-      background: rgba(255, 0, 0, 0.15);
-      border: 2px solid #ff0000;
-      color: #fff;
-      font-size: 12px;
+      background: rgba(20, 20, 20, 0.6);
+      border: 1px solid #444;
+      color: #aaa;
+      font-size: 11px;
+      font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
       touch-action: manipulation;
     }
-    .touch-btn:active { background: rgba(255, 0, 0, 0.6); }
-    #screen-jumpscare {
-      display: none;
-      background: #000;
-      z-index: 999;
-    }
-    .scare-face {
-      width: 320px;
-      height: 320px;
-      background: radial-gradient(circle, #fff 10%, #600 40%, #000 80%);
-      border-radius: 50%;
+    .touch-btn:active { background: rgba(50, 50, 50, 0.8); color: #fff; }
+    
+    #screen-jumpscare { display: none; background: #000; z-index: 999; text-align: center; }
+    .granny-skull {
+      width: 240px; height: 280px;
+      background: radial-gradient(circle, #e0e0e0 10%, #444 60%, #000 95%);
+      border-radius: 45% 45% 50% 50%;
       position: relative;
-      animation: shake 0.05s infinite;
+      animation: hyperShake 0.04s infinite;
+      box-shadow: 0 0 50px rgba(255,255,255,0.1);
     }
-    .eye {
-      position: absolute;
-      width: 40px; height: 70px;
-      background: #000;
-      top: 80px;
-      border-radius: 50%;
-      box-shadow: 0 0 15px #f00;
+    .g-eye {
+      position: absolute; width: 45px; height: 60px; background: #000; top: 80px; border-radius: 50%;
+      box-shadow: inset 0 0 15px #f00;
     }
-    .eye.left { left: 70px; }
-    .eye.right { right: 70px; }
-    .mouth {
-      position: absolute;
-      bottom: 40px; left: 80px;
-      width: 160px; height: 110px;
-      background: #000;
-      border-radius: 0 0 80px 80px;
+    .g-eye.left { left: 45px; }
+    .g-eye.right { right: 45px; }
+    .g-mouth {
+      position: absolute; bottom: 35px; left: 55px; width: 130px; height: 95px; background: #000; border-radius: 20px 20px 60px 60px;
     }
-    @keyframes shake {
-      0% { transform: translate(2px, 1px) rotate(0deg); }
-      50% { transform: translate(-2px, -2px) rotate(2deg); }
-      100% { transform: translate(1px, 2px) rotate(-1deg); }
+    @keyframes hyperShake {
+      0% { transform: scale(1.1) translate(4px, -3px); }
+      50% { transform: scale(1.25) translate(-4px, 4px); }
+      100% { transform: scale(1.15) translate(3px, 2px); }
     }
   </style>
 </head>
 <body>
 
-  <!-- 18+ Warning Screen -->
+  <!-- Warning Screen -->
   <div id="screen-warning">
     <div class="warning-box">
-      <h1>⚠️ 18+ EXTREME WARNING</h1>
-      <p class="bold-red">WARNING: FLASHING LIGHTS, INTENSE HORROR, LOUD JUMPSCARES, & DISTURBING PSYCHOLOGICAL AUDIO.</p>
-      <p>Ee game lo oka deyyam ninnu maze lo vetaduthundi. Nuuvu dhakkuni 30 mins survive avvali. Kani 30 minutes ayyela dhorikipothav...</p>
+      <h1>⚠️ 18+ PSYCHOLOGICAL HORROR</h1>
+      <p>USE HEADPHONES FOR FULL HORROR EXPERIENCE.</p>
+      <p>Ikkada flashlight mathrame undhi. Granny footsteps vinipisthuntai. Sound vinipinchindante ventane Bed kinda dhakko. 5 Days lo Master Key vethiki escape avvali.</p>
       
       <select id="user-age">
         <option value="">Select Age</option>
@@ -141,107 +154,128 @@
         <option value="other">Other</option>
       </select>
 
-      <button id="btn-start">ENTER NIGHTMARE</button>
+      <button id="btn-start">WAKE UP (DAY 1)</button>
     </div>
   </div>
 
-  <!-- Game Screen -->
+  <!-- Game Play Area -->
   <div id="screen-game">
     <canvas id="renderCanvas"></canvas>
+    <div class="vignette" id="vignette-effect"></div>
     <div class="hud">
-      <span id="hud-timer">SURVIVED: 00:00 / 30:00</span>
-      <span id="hud-status" style="color: #00ff66;">STATUS: SAFE</span>
-      <span id="hud-battery">BATTERY: 100%</span>
+      <span id="hud-day">DAY 1 / 5</span>
+      <span id="hud-item">ITEM: NONE</span>
+      <span id="hud-status">CALM</span>
     </div>
+    <div class="alert-msg" id="hud-alert"></div>
 
-    <!-- Mobile Touch Controls -->
     <div class="controls">
       <div class="touch-btn" id="btn-left">◀ TURN</div>
       <div class="touch-btn" id="btn-fwd">▲ RUN</div>
       <div class="touch-btn" id="btn-right">TURN ▶</div>
-      <div class="touch-btn" id="btn-hide" style="border-color:#ffcc00; color:#ffcc00;">HIDE</div>
+      <div class="touch-btn" id="btn-action">GRAB/DOOR</div>
+      <div class="touch-btn" id="btn-hide">HIDE</div>
     </div>
   </div>
 
   <!-- Jumpscare Screen -->
   <div id="screen-jumpscare">
-    <div class="scare-face">
-      <div class="eye left"></div>
-      <div class="eye right"></div>
-      <div class="mouth"></div>
+    <div class="granny-skull">
+      <div class="g-eye left"></div>
+      <div class="g-eye right"></div>
+      <div class="g-mouth"></div>
     </div>
-    <h1 style="font-size:32px; margin-top:20px;">YOU CANNOT ESCAPE HER.</h1>
+    <h1 id="jumpscare-title" style="margin-top:25px; color:#c00;">SHE CAUGHT YOU.</h1>
+    <p id="jumpscare-sub" style="color:#666;"></p>
+    <button id="btn-continue" style="max-width:200px; margin-top:15px;">CONTINUE</button>
+  </div>
+
+  <div id="screen-escaped" style="display:none; text-align:center;">
+    <h1 style="color:#aaa; letter-spacing:4px;">YOU SURVIVED</h1>
+    <p style="margin:15px 0;">You unlocked the heavy door and escaped into the night.</p>
+    <button onclick="location.reload()" style="max-width:200px;">PLAY AGAIN</button>
   </div>
 
   <script>
-    // Audio Synth Setup
     let audioCtx;
     function initAudio() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      startDrone();
+      playDarkAmbience();
     }
 
-    function startDrone() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(45, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-    }
-
-    function playHeartbeat(fast = false) {
+    function playDarkAmbience() {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(fast ? 90 : 60, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+      osc.frequency.setValueAtTime(38, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.25);
     }
 
-    function playScream() {
+    function playHeartbeat(vol=0.3, speed=60) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(speed, audioCtx.currentTime);
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    function playGrannyCreak() {
       if (!audioCtx) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.8);
-      gain.gain.setValueAtTime(0.9, audioCtx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      osc.frequency.setValueAtTime(140 + Math.random()*40, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.85);
+      osc.stop(audioCtx.currentTime + 0.35);
     }
 
-    // Maze Definition
-    const map = [
-      [1,1,1,1,1,1,1,1,1,1,1,1],
-      [1,0,0,0,1,0,0,0,0,0,0,1],
-      [1,0,1,0,1,0,1,1,1,1,0,1],
-      [1,0,1,0,0,0,0,0,0,1,0,1],
-      [1,0,1,1,1,1,0,1,0,1,0,1],
-      [1,0,0,0,0,1,0,1,0,0,0,1],
-      [1,1,1,0,0,1,0,1,1,1,0,1],
-      [1,0,0,0,0,0,0,0,0,1,0,1],
-      [1,0,1,1,1,1,1,1,0,1,0,1],
-      [1,0,0,0,0,0,0,0,0,0,0,1],
-      [1,1,1,1,1,1,1,1,1,1,1,1]
+    function playJumpscareScream() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.9);
+      gain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.9);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.95);
+    }
+
+    // 0: Floor, 1: Wood Wall, 2: Heavy Door, 3: Key, 4: Bed Hiding Spot
+    const houseMap = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,0,0,0,0,1,4,0,0,1],
+      [1,0,4,0,1,0,1,1,0,1,0,0,0,1],
+      [1,0,0,0,0,0,1,3,0,0,0,0,0,1],
+      [1,1,2,1,1,0,1,1,1,1,0,1,1,1],
+      [1,0,0,0,1,0,0,0,0,0,0,0,0,1],
+      [1,0,4,0,1,0,1,1,0,1,1,1,0,1],
+      [1,0,0,0,0,0,1,0,0,0,3,1,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
-    let player = { x: 1.5, y: 1.5, dir: 0, rot: 0, speed: 0, isHiding: false };
-    let ghost = { x: 9.5, y: 9.5, speed: 0.015 };
-    let battery = 100;
-    let startTime;
+    let currentDay = 1;
+    let player = { x: 1.5, y: 1.5, dir: 0, rot: 0, speed: 0, isHiding: false, hasKey: false };
+    let granny = { x: 10.5, y: 6.5, speed: 0.012, hunting: false, huntTimer: 0 };
     let gameOver = false;
+    let flashFlicker = 1;
 
     const canvas = document.getElementById('renderCanvas');
     const ctx = canvas.getContext('2d');
@@ -253,29 +287,20 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Start Screen Flow
     document.getElementById('btn-start').addEventListener('click', () => {
       const age = document.getElementById('user-age').value;
       const gender = document.getElementById('user-gender').value;
-
-      if (!age || !gender) {
-        alert('Please select Age and Gender to verify warnings.');
-        return;
-      }
-      if (age === 'under18') {
-        alert('WARNING: Under 18 are not allowed due to intense psychological horror elements.');
-        return;
-      }
-
+      if (!age || !gender) return alert('Select Age & Gender.');
+      if (age === 'under18') return alert('18+ Only.');
+      
       initAudio();
       document.getElementById('screen-warning').style.display = 'none';
       document.getElementById('screen-game').style.display = 'flex';
-      startTime = Date.now();
       requestAnimationFrame(gameLoop);
-      setInterval(heartbeatLoop, 1000);
+      setInterval(heartbeatTensionLoop, 800);
+      setInterval(flickerFlashlight, 2000);
     });
 
-    // Touch controls
     const bindBtn = (id, onDown, onUp) => {
       const el = document.getElementById(id);
       el.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(); });
@@ -286,28 +311,98 @@
 
     bindBtn('btn-left', () => player.rot = -0.04, () => player.rot = 0);
     bindBtn('btn-right', () => player.rot = 0.04, () => player.rot = 0);
-    bindBtn('btn-fwd', () => player.speed = 0.035, () => player.speed = 0);
+    bindBtn('btn-fwd', () => {
+      player.speed = 0.035;
+      if (Math.random() < 0.04) alertGranny("Wood creaked...");
+    }, () => player.speed = 0);
 
-    const hideBtn = document.getElementById('btn-hide');
-    hideBtn.addEventListener('touchstart', (e) => {
+    document.getElementById('btn-hide').addEventListener('touchstart', (e) => {
       e.preventDefault();
-      player.isHiding = !player.isHiding;
-      hideBtn.innerText = player.isHiding ? 'UNHIDE' : 'HIDE';
+      const px = Math.floor(player.x);
+      const py = Math.floor(player.y);
+      if (houseMap[py][px] === 4 || player.isHiding) {
+        player.isHiding = !player.isHiding;
+        document.getElementById('btn-hide').innerText = player.isHiding ? 'UNHIDE' : 'HIDE';
+        showAlert(player.isHiding ? "[Holding Breath under bed...]" : "Left bed.");
+      } else {
+        showAlert("No hiding spot here.");
+      }
     });
 
-    function heartbeatLoop() {
-      if (gameOver) return;
-      const dist = Math.hypot(ghost.x - player.x, ghost.y - player.y);
-      if (dist < 3) playHeartbeat(true);
-      else if (dist < 6) playHeartbeat(false);
+    document.getElementById('btn-action').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const lookX = Math.floor(player.x + Math.cos(player.dir) * 0.8);
+      const lookY = Math.floor(player.y + Math.sin(player.dir) * 0.8);
+
+      if (houseMap[lookY] && houseMap[lookY][lookX] === 3) {
+        player.hasKey = true;
+        houseMap[lookY][lookX] = 0;
+        document.getElementById('hud-item').innerText = 'ITEM: MASTER KEY';
+        showAlert("Found Master Key!");
+        return;
+      }
+
+      if (houseMap[lookY] && houseMap[lookY][lookX] === 2) {
+        if (player.hasKey) {
+          document.getElementById('screen-game').style.display = 'none';
+          document.getElementById('screen-escaped').style.display = 'flex';
+          gameOver = true;
+        } else {
+          showAlert("Door is padlocked. Need Master Key.");
+          alertGranny("Heavy door shook loudly!");
+        }
+      }
+    });
+
+    function alertGranny(msg) {
+      granny.hunting = true;
+      granny.huntTimer = 350;
+      showAlert(msg);
+      playGrannyCreak();
     }
 
-    // Raycasting Rendering
+    function showAlert(text) {
+      const el = document.getElementById('hud-alert');
+      el.innerText = text;
+      setTimeout(() => { if (el.innerText === text) el.innerText = ''; }, 2200);
+    }
+
+    function flickerFlashlight() {
+      if (Math.random() < 0.35) {
+        flashFlicker = 0.3;
+        setTimeout(() => flashFlicker = 1, 150);
+      }
+    }
+
+    function heartbeatTensionLoop() {
+      if (gameOver) return;
+      const d = Math.hypot(granny.x - player.x, granny.y - player.y);
+      const vignette = document.getElementById('vignette-effect');
+      
+      if (d < 3) {
+        playHeartbeat(0.6, 95);
+        vignette.classList.add('panic-red');
+      } else if (d < 6) {
+        playHeartbeat(0.3, 70);
+        vignette.classList.remove('panic-red');
+        if (Math.random() < 0.4) playGrannyCreak();
+      } else {
+        vignette.classList.remove('panic-red');
+      }
+    }
+
     function render3D() {
-      ctx.fillStyle = '#050505';
+      // Very Dark Realistic Palette
+      ctx.fillStyle = '#030303';
       ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-      ctx.fillStyle = '#111';
+      ctx.fillStyle = '#090909';
       ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+      if (player.isHiding) {
+        ctx.fillStyle = 'rgba(0,0,0,0.92)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
 
       const fov = Math.PI / 3;
       const numRays = Math.floor(canvas.width / 4);
@@ -316,43 +411,77 @@
       for (let i = 0; i < numRays; i++) {
         const rayAngle = player.dir - halfFov + (i / numRays) * fov;
         let dist = 0;
-        let hit = 0;
+        let hitType = 0;
         const cos = Math.cos(rayAngle);
         const sin = Math.sin(rayAngle);
 
-        while (!hit && dist < 12) {
+        while (!hitType && dist < 10) {
           dist += 0.05;
-          const checkX = Math.floor(player.x + cos * dist);
-          const checkY = Math.floor(player.y + sin * dist);
-          if (map[checkY] && map[checkY][checkX] === 1) hit = 1;
+          const cx = Math.floor(player.x + cos * dist);
+          const cy = Math.floor(player.y + sin * dist);
+          if (houseMap[cy] && houseMap[cy][cx] > 0) {
+            hitType = houseMap[cy][cx];
+          }
         }
 
         const correctedDist = dist * Math.cos(rayAngle - player.dir);
         const wallHeight = Math.min(canvas.height, (canvas.height / correctedDist));
         
-        // Flashlight shade
-        const shade = Math.max(0, 1 - (dist / (battery > 10 ? 8 : 3)));
-        const r = Math.floor(60 * shade);
-        const g = Math.floor(0 * shade);
-        const b = Math.floor(0 * shade);
+        // Flashlight beam attenuation
+        const shade = Math.max(0, (1 - (dist / 6.5)) * flashFlicker);
 
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        if (hitType === 1) ctx.fillStyle = `rgb(${Math.floor(55*shade)}, ${Math.floor(45*shade)}, ${Math.floor(35*shade)})`; // Dusty wood
+        else if (hitType === 2) ctx.fillStyle = `rgb(${Math.floor(80*shade)}, ${Math.floor(20*shade)}, ${Math.floor(20*shade)})`; // Dark Door
+        else if (hitType === 3) ctx.fillStyle = `rgb(${Math.floor(160*shade)}, ${Math.floor(140*shade)}, ${Math.floor(30*shade)})`; // Key
+        else if (hitType === 4) ctx.fillStyle = `rgb(${Math.floor(25*shade)}, ${Math.floor(40*shade)}, ${Math.floor(50*shade)})`; // Bed
+
         ctx.fillRect(i * 4, (canvas.height - wallHeight) / 2, 4, wallHeight);
       }
 
-      // Render Ghost marker if in view
-      const gDist = Math.hypot(ghost.x - player.x, ghost.y - player.y);
-      if (gDist < 6) {
-        ctx.fillStyle = `rgba(255, 0, 0, ${1 - gDist / 6})`;
-        ctx.fillRect(canvas.width/2 - 20, canvas.height/2 - 20, 40, 80);
+      // Granny Figure Shadow
+      const gDist = Math.hypot(granny.x - player.x, granny.y - player.y);
+      if (gDist < 5.5 && !player.isHiding) {
+        const shade = (1 - gDist / 5.5) * flashFlicker;
+        ctx.fillStyle = `rgba(200, 200, 200, ${shade})`;
+        ctx.fillRect(canvas.width/2 - 20, canvas.height/2 - 40, 40, 95);
       }
     }
 
-    function triggerScare() {
+    function triggerCatch() {
       gameOver = true;
-      playScream();
+      playJumpscareScream();
       document.getElementById('screen-game').style.display = 'none';
       document.getElementById('screen-jumpscare').style.display = 'flex';
+      
+      const sub = document.getElementById('jumpscare-sub');
+      const btn = document.getElementById('btn-continue');
+
+      if (currentDay < 5) {
+        sub.innerText = `You were knocked unconscious. Day ${currentDay} lost.`;
+        btn.innerText = `WAKE UP (DAY ${currentDay + 1})`;
+        btn.onclick = restartNextDay;
+      } else {
+        document.getElementById('jumpscare-title').innerText = "DAY 5: YOU NEVER LEFT.";
+        sub.innerText = "Granny locked you in the basement forever.";
+        btn.innerText = "RESTART GAME";
+        btn.onclick = () => location.reload();
+      }
+    }
+
+    function restartNextDay() {
+      currentDay++;
+      document.getElementById('hud-day').innerText = `DAY ${currentDay} / 5`;
+      player.x = 1.5;
+      player.y = 1.5;
+      player.dir = 0;
+      player.isHiding = false;
+      granny.x = 10.5;
+      granny.y = 6.5;
+      granny.hunting = false;
+      gameOver = false;
+      document.getElementById('screen-jumpscare').style.display = 'none';
+      document.getElementById('screen-game').style.display = 'flex';
+      requestAnimationFrame(gameLoop);
     }
 
     function update() {
@@ -362,50 +491,46 @@
       if (!player.isHiding) {
         const nx = player.x + Math.cos(player.dir) * player.speed;
         const ny = player.y + Math.sin(player.dir) * player.speed;
-        if (map[Math.floor(ny)][Math.floor(nx)] === 0) {
+        const tile = houseMap[Math.floor(ny)][Math.floor(nx)];
+        if (tile !== 1 && tile !== 2) {
           player.x = nx;
           player.y = ny;
         }
       }
 
-      // Ghost AI Movement
-      const dx = player.x - ghost.x;
-      const dy = player.y - ghost.y;
+      const dx = player.x - granny.x;
+      const dy = player.y - granny.y;
       const dist = Math.hypot(dx, dy);
 
-      if (!player.isHiding || dist < 1.2) {
-        ghost.x += (dx / dist) * ghost.speed;
-        ghost.y += (dy / dist) * ghost.speed;
-      }
-
-      // Timer & 30-min inevitability
-      const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
-      const mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
-      const secs = String(elapsedSec % 60).padStart(2, '0');
-      document.getElementById('hud-timer').innerText = `SURVIVED: ${mins}:${secs} / 30:00`;
-
-      // Speed up ghost gradually up to 30 mins
-      ghost.speed = 0.015 + (elapsedSec / 1800) * 0.05;
-
-      // Battery drain
-      battery = Math.max(0, 100 - (elapsedSec / 18));
-      document.getElementById('hud-battery').innerText = `BATTERY: ${Math.floor(battery)}%`;
-
-      const statusEl = document.getElementById('hud-status');
-      if (player.isHiding) {
-        statusEl.innerText = 'STATUS: HIDDEN';
-        statusEl.style.color = '#ffcc00';
-      } else if (dist < 3) {
-        statusEl.innerText = 'STATUS: IT SEES YOU!';
-        statusEl.style.color = '#ff0000';
+      if (granny.hunting && granny.huntTimer > 0) {
+        granny.huntTimer--;
+        granny.speed = 0.022;
       } else {
-        statusEl.innerText = 'STATUS: SAFE';
-        statusEl.style.color = '#00ff66';
+        granny.speed = 0.012;
       }
 
-      // Caught check (or 30 mins reached)
-      if (dist < 0.4 || elapsedSec >= 1800) {
-        triggerScare();
+      if (!player.isHiding || dist < 0.9) {
+        granny.x += (dx / dist) * granny.speed;
+        granny.y += (dy / dist) * granny.speed;
+      }
+
+      const st = document.getElementById('hud-status');
+      if (player.isHiding) {
+        st.innerText = 'HIDDEN (HOLDING BREATH)';
+        st.style.color = '#888';
+      } else if (dist < 2.5) {
+        st.innerText = 'SHE IS RIGHT BEHIND YOU!';
+        st.style.color = '#d00';
+      } else if (dist < 5.0) {
+        st.innerText = 'FOOTSTEPS NEARBY...';
+        st.style.color = '#aa0';
+      } else {
+        st.innerText = 'CALM';
+        st.style.color = '#666';
+      }
+
+      if (dist < 0.45) {
+        triggerCatch();
       }
     }
 
@@ -417,4 +542,3 @@
   </script>
 </body>
 </html>
-
